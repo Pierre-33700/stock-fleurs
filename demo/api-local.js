@@ -156,18 +156,11 @@
 
       journal: function (from) {
         if (!isDate(from)) throw new HttpError(400, 'Date invalide.');
-        var agg = {};
-        db.movements.forEach(function (m) {
-          if (m.mdate < from) return;
-          var k = m.variety_id + '|' + m.mdate + '|' + m.type;
-          agg[k] = agg[k] || { variety_id: m.variety_id, mdate: m.mdate, type: m.type, total: 0 };
-          agg[k].total += m.qty;
-        });
-        var recent = db.movements.slice().sort(function (a, b) { return a.mdate < b.mdate ? 1 : a.mdate > b.mdate ? -1 : b.id - a.id; })
-          .slice(0, 30).map(function (m) {
-            return { id: m.id, type: m.type, date: m.mdate, qty: m.qty, reason: m.reason, variety: variety(m.variety_id).name };
-          });
-        return { pivot: Object.keys(agg).map(function (k) { return agg[k]; }), recent: recent };
+        var movements = db.movements.filter(function (m) { return m.mdate >= from; })
+          .sort(function (x, y) { return x.mdate < y.mdate ? 1 : x.mdate > y.mdate ? -1 : y.id - x.id; })
+          .slice(0, 2000)
+          .map(function (m) { return { id: m.id, type: m.type, variety_id: m.variety_id, date: m.mdate, qty: m.qty, reason: m.reason }; });
+        return { movements: movements };
       },
 
       /** Repart des données d'exemple (dates calculées par rapport à aujourd'hui). */

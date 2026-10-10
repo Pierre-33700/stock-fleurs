@@ -26,7 +26,7 @@ test('une sortie supérieure au stock est refusée et ne change rien', () => {
   const { s, v } = setup();
   assert.throws(() => s.addExit({ variety_id: v, date: '2026-10-10', qty: 351, reason: 'Vente' }), /Stock insuffisant/);
   assert.equal(stock(s, v), 350);
-  assert.equal(s.journal('2026-10-01').recent.filter((m) => m.type === 'out').length, 0);
+  assert.equal(s.journal('2026-10-01').movements.filter((m) => m.type === 'out').length, 0);
 });
 
 test('annuler une sortie rend les tiges aux bons lots', () => {
@@ -55,13 +55,15 @@ test('validations : quantité, motif, date, doublon de variété', () => {
   assert.throws(() => s.addVariety('dahlia'), /existe déjà/);
 });
 
-test('le journal agrège entrées et sorties par variété et par jour', () => {
+test('le journal renvoie les mouvements depuis une date, du plus récent au plus ancien', () => {
   const { s, v } = setup();
   s.addExit({ variety_id: v, date: '2026-10-09', qty: 10, reason: 'Vente' });
   s.addExit({ variety_id: v, date: '2026-10-09', qty: 5, reason: 'Perte' });
-  const p = s.journal('2026-10-01').pivot;
-  assert.equal(p.find((r) => r.type === 'out' && r.mdate === '2026-10-09').total, 15);
-  assert.equal(p.find((r) => r.type === 'in' && r.mdate === '2026-10-05').total, 120);
+  const m = s.journal('2026-10-01').movements;
+  const sum = (type, date) => m.filter((x) => x.type === type && x.date === date).reduce((t, x) => t + x.qty, 0);
+  assert.equal(sum('out', '2026-10-09'), 15);
+  assert.equal(sum('in', '2026-10-05'), 120);
+  assert.deepEqual(s.journal('2026-10-09').movements.map((x) => x.date).sort(), ['2026-10-09', '2026-10-09', '2026-10-09']);
 });
 
 test('réglages : seuils par défaut et par variété, validation', () => {

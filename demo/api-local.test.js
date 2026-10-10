@@ -68,15 +68,17 @@ test('validations et réglages identiques', () => {
   assert.equal(call(srv, 'DELETE', '/api/varieties/' + v).status, 409);
 });
 
-test('journal : agrégation par variété et par jour, et réinitialisation de la démo', () => {
+test('journal : mouvements depuis une date, et réinitialisation de la démo', () => {
   const srv = createLocalApi(fakeStorage());
   const v = call(srv, 'POST', '/api/varieties', { name: 'Pivoine' }).body.id;
   call(srv, 'POST', '/api/entries', { variety_id: v, date: '2026-03-05', qty: 100 });
   call(srv, 'POST', '/api/exits', { variety_id: v, date: '2026-03-06', qty: 10, reason: 'Vente' });
   call(srv, 'POST', '/api/exits', { variety_id: v, date: '2026-03-06', qty: 5, reason: 'Perte' });
   const j = call(srv, 'GET', '/api/journal?from=2026-03-01').body;
-  assert.equal(j.pivot.find((r) => r.variety_id === v && r.type === 'out').total, 15);
-  assert.equal(j.recent[0].variety.length > 0, true);
+  const outs = j.movements.filter((m) => m.variety_id === v && m.type === 'out');
+  assert.equal(outs.reduce((t, m) => t + m.qty, 0), 15);
+  assert.deepEqual(outs.map((m) => m.reason).sort(), ['Perte', 'Vente']);
+  assert.equal(call(srv, 'GET', '/api/journal?from=2026-03-06').body.movements.filter((m) => m.variety_id === v).length, 2);
   call(srv, 'POST', '/api/demo/reset');
   assert.equal(call(srv, 'GET', '/api/state').body.varieties.length, 6);
 });

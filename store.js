@@ -108,11 +108,8 @@ function openStore(file) {
     delMovement: db.prepare('DELETE FROM movements WHERE id = ?'),
     lotOfMovement: db.prepare('SELECT id, qty, remaining FROM lots WHERE movement_id = ?'),
     delLot: db.prepare('DELETE FROM lots WHERE id = ?'),
-    pivot: db.prepare(`SELECT variety_id, mdate, type, SUM(qty) AS total FROM movements
-                       WHERE mdate >= ? GROUP BY variety_id, mdate, type`),
-    recent: db.prepare(`SELECT m.id, m.type, m.mdate AS date, m.qty, m.reason, v.name AS variety
-                        FROM movements m JOIN varieties v ON v.id = m.variety_id
-                        ORDER BY m.mdate DESC, m.id DESC LIMIT ?`),
+    since: db.prepare(`SELECT id, type, variety_id, mdate AS date, qty, reason FROM movements
+                       WHERE mdate >= ? ORDER BY mdate DESC, id DESC LIMIT ?`),
   };
 
   function tx(fn) {
@@ -249,9 +246,10 @@ function openStore(file) {
       });
     },
 
-    journal(from, limit = 30) {
+    /** Tous les mouvements depuis une date ; l'écran en tire le récapitulatif par variété. */
+    journal(from, limit = 2000) {
       if (!isDate(from)) throw new HttpError(400, 'Date invalide.');
-      return { pivot: q.pivot.all(from), recent: q.recent.all(limit) };
+      return { movements: q.since.all(from, limit) };
     },
   };
 }

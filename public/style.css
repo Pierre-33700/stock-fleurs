@@ -126,3 +126,16 @@ td.has{font-weight:700}
 
 .demo-banner{display:flex;gap:8px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:.88rem}
 .demo-banner .mini{border-color:currentColor;color:inherit}
+
+.jsum{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.jsum .k{display:block;font-size:.78rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.jsum b{font-family:var(--f-display);font-size:1.9rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.jsum .why{flex:1 1 220px;min-width:0;font-size:.92rem}
+.in{color:var(--ok)} .out{color:var(--bad)}
+.jnums{display:flex;gap:20px;font-family:var(--f-display);font-weight:700;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.jnums small{font-family:var(--f-body);font-weight:500;font-size:.75rem;color:var(--muted);margin-left:5px}
+.jday{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding-top:10px}
+.mv{display:flex;align-items:center;gap:10px;padding:6px 0;font-variant-numeric:tabular-nums}
+.mv .sg{font-family:var(--f-display);font-weight:700;min-width:56px;font-size:1.05rem}
+.mv .sg.in{color:var(--ok)} .mv .sg.out{color:var(--bad)}
+.mv .mini{margin-left:auto}

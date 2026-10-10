@@ -9,8 +9,8 @@ var DOW = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 
 var st = {
   tab: 'stock', varieties: [], lots: [], settings: { warn_days: 4, bad_days: 6 }, auth: false, demo: false, journal: null, loaded: false, busy: false,
-  open: {}, filter: '', adding: false, focusNew: false, confirm: null,
-  inV: null, inD: null, inQ: 50, outV: null, outQ: 30, outM: 'Vente', pivot: 'in'
+  open: {}, jopen: {}, period: 7, filter: '', adding: false, focusNew: false, confirm: null,
+  inV: null, inD: null, inQ: 50, outV: null, outQ: 30, outM: 'Vente'
 };
 
 /* ---------- dates (heure locale du téléphone ou de l'ordinateur) ---------- */
@@ -71,7 +71,7 @@ function loadState() {
   });
 }
 function loadJournal() {
-  var from = lastDays(7)[0];
+  var from = lastDays(st.period)[0];
   return api('GET', '/api/journal?from=' + from).then(function (j) { st.journal = j; });
 }
 function refresh() {
@@ -161,32 +161,57 @@ function vOut() {
     box + '<button class="primary" data-a="saveOut" ' + (q > 0 && pl.short === 0 ? '' : 'disabled') + '>Valider la sortie</button></form>';
 }
 
+function reasonsLine(map) {
+  var order = REASONS.map(function (r) { return r[0]; });
+  return order.filter(function (r) { return map[r]; }).map(function (r) { return r + ' ' + map[r]; }).join(' · ');
+}
+
 function vLog() {
   if (!st.journal) return '<p class="loading">Chargement…</p>';
-  var days = lastDays(7), isIn = st.pivot === 'in', type = isIn ? 'in' : 'out';
-  var map = {};
-  st.journal.pivot.forEach(function (r) { if (r.type === type) map[r.variety_id + '|' + r.mdate] = r.total; });
-  var head = '<tr><th>Variété</th>' + days.map(function (d) { var x = dt(d); return '<th>' + DOW[x.getDay()] + ' ' + x.getDate() + '</th>'; }).join('') + '<th>Total</th></tr>';
-  var colT = days.map(function () { return 0; }), grand = 0;
-  var seen = {};
-  st.journal.pivot.forEach(function (r) { seen[r.variety_id] = true; });
-  var rows = st.varieties.filter(function (v) { return !v.archived || seen[v.id]; }).map(function (v) {
-    var rt = 0;
-    var c = days.map(function (d, i) { var n = map[v.id + '|' + d] || 0; rt += n; colT[i] += n; return '<td class="' + (n ? 'has' : 'z') + '">' + (n || '·') + '</td>'; }).join('');
-    grand += rt;
-    return '<tr><td>' + esc(v.name) + '</td>' + c + '<td class="has">' + rt + '</td></tr>';
+  var P = [[7, '7 jours'], [30, '30 jours'], [90, '3 mois']];
+  var seg = '<div class="seg" role="group" aria-label="Période">' + P.map(function (p) {
+    return '<button type="button" data-a="period" data-v="' + p[0] + '" aria-pressed="' + (st.period === p[0]) + '">' + p[1] + '</button>';
+  }).join('') + '</div>';
+
+  // Regroupe les mouvements de la période par variété.
+  var g = {}, totIn = 0, totOut = 0, totReasons = {};
+  st.journal.movements.forEach(function (m) {
+    var x = g[m.variety_id] = g[m.variety_id] || { in: 0, out: 0, reasons: {}, moves: [] };
+    x.moves.push(m);
+    if (m.type === 'in') { x.in += m.qty; totIn += m.qty; }
+    else { x.out += m.qty; totOut += m.qty; x.reasons[m.reason] = (x.reasons[m.reason] || 0) + m.qty; totReasons[m.reason] = (totReasons[m.reason] || 0) + m.qty; }
+  });
+  var list = st.varieties.filter(function (v) { return g[v.id]; });
+
+  var head = '<div class="sec" style="margin-top:0"><h2>Récapitulatif</h2>' + seg + '</div>';
+  if (!list.length) return head + '<div class="empty"><p>Aucun mouvement sur cette période.</p></div>';
+
+  var sum = '<div class="jsum"><div><span class="k">Entrées</span><b class="in">+' + totIn + '</b></div>' +
+    '<div><span class="k">Sorties</span><b class="out">−' + totOut + '</b></div>' +
+    '<div class="why"><span class="k">Motifs des sorties</span><span>' + (reasonsLine(totReasons) || 'Aucune sortie') + '</span></div></div>';
+
+  var cards = list.map(function (v) {
+    var x = g[v.id], open = st.jopen[v.id], detail = '';
+    if (open) {
+      var days = [], byDay = {};
+      x.moves.forEach(function (m) { if (!byDay[m.date]) { byDay[m.date] = []; days.push(m.date); } byDay[m.date].push(m); });
+      detail = '<div class="lots">' + days.map(function (d) {
+        return '<div class="jday">' + fmt(d) + '</div>' + byDay[d].map(function (m) {
+          var sure = st.confirm === m.id;
+          return '<div class="mv"><span class="sg ' + m.type + '">' + (m.type === 'in' ? '+' : '−') + m.qty + '</span>' +
+            (m.type === 'in' ? '<span class="chip ok">Entrée</span>' : '<span class="chip ' + RCLS[m.reason] + '">' + esc(m.reason) + '</span>') +
+            '<button class="mini' + (sure ? ' sure' : '') + '" data-a="undo" data-v="' + m.id + '">' + (sure ? 'Confirmer l\'annulation' : 'Annuler') + '</button></div>';
+        }).join('');
+      }).join('') + '</div>';
+    }
+    return '<article class="card"><button class="vhead" data-a="jopen" data-v="' + v.id + '" aria-expanded="' + !!open + '">' +
+      '<div class="vrow"><span class="vname">' + esc(v.name) + '</span><span class="hint" style="margin:0">En stock : ' + v.total + '</span></div>' +
+      '<div class="jnums"><span class="in">+' + x.in + '<small>entrées</small></span><span class="out">−' + x.out + '<small>sorties</small></span></div>' +
+      (x.out ? '<div class="hint" style="margin:0">' + reasonsLine(x.reasons) + '</div>' : '') +
+      '<span class="hint" style="margin:0">' + (open ? 'Masquer le détail' : 'Voir le détail (' + x.moves.length + ' mouvement' + (x.moves.length > 1 ? 's' : '') + ')') + '</span></button>' + detail + '</article>';
   }).join('');
-  var foot = '<tr><td>Total</td>' + colT.map(function (n) { return '<td>' + n + '</td>'; }).join('') + '<td>' + grand + '</td></tr>';
-  var L = st.journal.recent.map(function (m) {
-    var sure = st.confirm === m.id;
-    return '<div class="lg"><span class="sg ' + m.type + '">' + (m.type === 'in' ? '+' : '−') + m.qty + '</span><span class="m"><b>' + esc(m.variety) + '</b><small>' + fmt(m.date) + '</small></span>' +
-      '<span class="tg tgs">' + (m.type === 'in' ? '<span class="chip ok">Entrée</span>' : '<span class="chip ' + RCLS[m.reason] + '">' + esc(m.reason) + '</span>') +
-      '<button class="mini' + (sure ? ' sure' : '') + '" data-a="undo" data-v="' + m.id + '">' + (sure ? 'Confirmer l\'annulation' : 'Annuler') + '</button></span></div>';
-  }).join('');
-  return '<div class="sec" style="margin-top:0"><h2>' + (isIn ? 'Entrées' : 'Sorties') + ' par variété et par jour</h2><div class="seg" role="group">' +
-    [['in', 'Entrées'], ['out', 'Sorties']].map(function (a) { return '<button type="button" data-a="pivot" data-v="' + a[0] + '" aria-pressed="' + (st.pivot === a[0]) + '">' + a[1] + '</button>'; }).join('') + '</div></div>' +
-    (active().length ? '<div class="tw"><table><thead>' + head + '</thead><tbody>' + rows + '</tbody><tfoot>' + foot + '</tfoot></table></div><p class="hint">7 derniers jours, en ' + UNIT + '. Faites défiler le tableau sur téléphone.</p>' : '<p class="hint">Aucune donnée pour le moment.</p>') +
-    '<div class="sec"><h2>Derniers mouvements</h2></div>' + (L ? '<div class="log">' + L + '</div>' : '<p class="hint">Aucun mouvement pour le moment.</p>');
+
+  return head + sum + '<div class="grid">' + cards + '</div>';
 }
 
 function numInput(id, val, ph, label) {
@@ -275,7 +300,9 @@ document.addEventListener('click', function (e) {
   else if (a === 'dq') { var k = b.dataset.k; st[k] = clamp(st[k] + +v); }
   else if (a === 'all') st.outQ = byId(st.outV).total;
   else if (a === 'inV' || a === 'outV') { st[a] = +v; }
-  else if (a === 'outM' || a === 'pivot') st[a] = v;
+  else if (a === 'outM') st[a] = v;
+  else if (a === 'jopen') st.jopen[v] = !st.jopen[v];
+  else if (a === 'period') { st.period = +v; st.journal = null; guard(loadJournal()); }
   else if (a === 'toggleAdd') { st.adding = !st.adding; st.focusNew = st.adding; }
   else if (a === 'addV') { addVariety('newv'); return; }
   else if (a === 'addVS') { addVariety('setnew'); return; }
