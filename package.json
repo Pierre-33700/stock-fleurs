@@ -1,0 +1,15 @@
+{
+  "name": "stock-fleurs",
+  "version": "1.0.0",
+  "description": "Suivi de stock de fleurs coupées, sorties dans l'ordre d'arrivée (FIFO)",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "demo": "node --disable-warning=ExperimentalWarning seed-demo.js",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "build:demo": "node build-demo.js"
+  }
+}

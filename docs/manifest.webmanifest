@@ -1,0 +1,17 @@
+{
+  "name": "Stock Fleurs (démo)",
+  "short_name": "Stock Fleurs",
+  "lang": "fr",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f2",
+  "theme_color": "#1f6b4a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

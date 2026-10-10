@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6b4a">
+<title>Connexion · Stock Fleurs</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+<style>html{color-scheme:light dark}body{margin:0}.login{max-width:420px;margin:0 auto;padding:12vh 16px 48px}#err{color:var(--bad);font-weight:600;min-height:1.4em;margin:0}</style>
+</head>
+<body>
+<main class="login">
+  <form class="form" id="f">
+    <div class="brand">Stock Fleurs<small>Accès réservé</small></div>
+    <div class="fld">
+      <label for="pw">Mot de passe</label>
+      <input type="password" id="pw" autocomplete="current-password" required autofocus
+             style="padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);min-height:48px;width:100%">
+    </div>
+    <p id="err" role="alert"></p>
+    <button class="primary" id="go">Se connecter</button>
+  </form>
+</main>
+<script src="/login.js"></script>
+</body>
+</html>

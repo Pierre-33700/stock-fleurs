@@ -1,0 +1,33 @@
+# Configuration Fly.io. Remplacez le nom de l'application (il doit être unique chez Fly) avant le premier déploiement.
+app = "stock-fleurs-CHANGEZ-MOI"
+primary_region = "cdg"   # Paris
+
+[build]
+
+[env]
+  PORT = "8080"
+  DB_PATH = "/data/stock.db"
+  TRUST_PROXY = "1"
+
+# Le volume garde la base de données entre deux déploiements.
+[mounts]
+  source = "stock_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"     # la machine s'endort sans visite (quelques secondes de réveil)
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
